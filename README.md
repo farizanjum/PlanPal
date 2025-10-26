@@ -1,10 +1,10 @@
-# 🎯 PlanPal - Group Planning Made Simple
+# PlanPal - Group Planning Made Simple
 
 A modern, mobile-first group planning application with real-time chat, event management, polls, and AI-powered trip assistance.
 
 ![PlanPal Logo](https://img.shields.io/badge/PlanPal-Group%20Planning-orange?style=for-the-badge&logo=calendar)
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
@@ -19,52 +19,52 @@ A modern, mobile-first group planning application with real-time chat, event man
 - [Contributing](#-contributing)
 - [License](#-license)
 
-## ✨ Features
+## Features
 
-### 🎨 **User Interface**
+### **User Interface**
 - **Modern Design**: Clean, intuitive interface with dark/light mode support
 - **Mobile-First**: Fully responsive design optimized for all devices
 - **Accessibility**: WCAG compliant with proper ARIA labels and keyboard navigation
 - **Smooth Animations**: Framer Motion powered transitions and micro-interactions
 
-### 👥 **Group Management**
+### **Group Management**
 - **Create Groups**: Easy group creation with custom names and descriptions
 - **Join Groups**: Join existing groups using unique group codes
 - **Member Management**: View member lists with proper pluralization
 - **Group Settings**: Manage group details and permissions
 
-### 💬 **Real-Time Chat**
+### **Real-Time Chat**
 - **Live Messaging**: Real-time chat powered by Supabase Realtime
 - **AI Assistant**: Integrated `@bot` powered by Google Gemini AI
 - **File Sharing**: Upload and share images in group chats
 - **Independent Scrolling**: Smart scroll containment for optimal UX
 - **Message Persistence**: Messages saved and synced across all devices
 
-### 📅 **Event Planning**
+### **Event Planning**
 - **Create Events**: Plan group activities with dates, times, and descriptions
 - **Event Management**: Edit, delete, and manage upcoming events
 - **Smart Suggestions**: AI-powered activity recommendations based on location
 - **Event Notifications**: Real-time updates for event changes
 
-### 🗳️ **Polling System**
+### **Polling System**
 - **Quick Polls**: Create polls for group decisions
 - **Multiple Choice**: Support for various poll types
 - **Real-Time Results**: Live poll results and voting
 - **Poll Management**: Edit and manage active polls
 
-### 🤖 **AI Integration**
+### **AI Integration**
 - **Gemini AI**: Google's advanced AI for intelligent responses
 - **Context-Aware**: Bot understands group context and trip details
 - **Smart Suggestions**: Location-based recommendations for activities
 - **Natural Language**: Conversational AI for planning assistance
 
-### 📱 **Mobile Optimization**
+### **Mobile Optimization**
 - **Touch-Friendly**: 44px minimum touch targets for mobile devices
 - **Responsive Breakpoints**: Optimized for phones, tablets, and desktops
 - **Custom Scrollbars**: Grey scrollbars with smooth scrolling
 - **Mobile Components**: Specialized mobile-optimized UI components
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### **Frontend**
 - **React 18**: Modern React with hooks and functional components
@@ -157,7 +157,7 @@ PlanPal/
 └── .gitignore                    # Git ignore rules
 ```
 
-## 📋 Prerequisites
+## Prerequisites
 
 Before you begin, ensure you have the following installed:
 
@@ -167,7 +167,7 @@ Before you begin, ensure you have the following installed:
 - **Supabase Account** (for backend services)
 - **Google Gemini API Key** (for AI features)
 
-## 🚀 Installation
+## Installation
 
 ### 1. Clone the Repository
 
@@ -190,7 +190,7 @@ cd ../frontend
 npm install
 ```
 
-## ⚙️ Environment Setup
+## Environment Setup
 
 ### Backend Environment Variables
 
@@ -230,7 +230,7 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 VITE_APP_NAME=PlanPal
 ```
 
-## 🏃‍♂️ Running the Application
+## Running the Application
 
 ### Development Mode
 
@@ -265,7 +265,7 @@ npm run build
 # Builds to frontend/dist/
 ```
 
-## 📱 Mobile Optimization
+## Mobile Optimization
 
 PlanPal is built with mobile-first design principles:
 
@@ -332,7 +332,7 @@ POST   /api/polls/:groupId      # Create poll
 POST   /api/polls/:id/vote      # Vote on poll
 ```
 
-## 🚀 Deployment
+## Deployment
 
 ### Frontend Deployment (Vercel/Netlify)
 
@@ -363,7 +363,7 @@ POST   /api/polls/:id/vote      # Vote on poll
 4. **Configure authentication** providers
 5. **Set up storage** for file uploads
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please follow these steps:
 
@@ -385,7 +385,7 @@ We welcome contributions! Please follow these steps:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Supabase** for providing excellent backend services
 - **Google Gemini** for AI capabilities
