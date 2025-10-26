@@ -8,6 +8,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ChevronUp } from 'lucide-react'
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSkeleton from './components/LoadingSkeleton'
+import { Analytics } from '@vercel/analytics/react'
 
 // Temporarily disable lazy loading to debug Link error
 import LandingPage from './pages/LandingPage'
@@ -185,6 +186,7 @@ function App() {
           </Router>
         </AuthProvider>
       </ThemeProvider>
+      <Analytics />
     </ErrorBoundary>
   )
 }

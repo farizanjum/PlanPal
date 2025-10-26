@@ -142,7 +142,7 @@ const LandingPage = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Step 1 */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -215,7 +215,7 @@ const LandingPage = () => {
           whileInView={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center max-w-3xl mx-auto"
+          className="text-center"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
             Ready to plan your next adventure?
@@ -223,8 +223,8 @@ const LandingPage = () => {
           <p className="text-lg text-white/90 mb-8">
             Join thousands of groups already planning amazing experiences together
           </p>
-          <Link to="/register" className="inline-flex items-center space-x-2 bg-white text-primary-600 hover:bg-gray-100 font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <span>Get Started Free</span>
+          <Link to={user ? "/dashboard" : "/register"} className="inline-flex items-center space-x-2 bg-white text-primary-600 hover:bg-gray-100 font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+            <span>{user ? "Go to Dashboard" : "Get Started Free"}</span>
             <ArrowRight size={20} />
           </Link>
         </motion.div>
