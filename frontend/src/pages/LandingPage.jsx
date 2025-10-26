@@ -4,11 +4,13 @@ import { Link } from 'react-router-dom'
 import { Users, Vote, MapPin, CheckCircle, ArrowRight, Sparkles } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import { useAuth } from '../context/AuthContext'
 import { smoothScrollTo, addScrollAnimation } from '../utils/lenis.js'
 
 const LandingPage = () => {
   const heroSectionRef = useRef(null)
   const featuresSectionRef = useRef(null)
+  const { user } = useAuth()
 
   useEffect(() => {
     // Add scroll-triggered animations to sections
@@ -84,8 +86,8 @@ const LandingPage = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-              <Link to="/register" className="btn-primary text-lg px-8 py-4">
-                Get Started
+              <Link to={user ? "/dashboard" : "/register"} className="btn-primary text-lg px-8 py-4">
+                {user ? "Dashboard" : "Get Started"}
               </Link>
               <button 
                 onClick={() => smoothScrollTo('#how-it-works', { offset: -80, duration: 1.5 })}
