@@ -12,26 +12,21 @@ class ApiService {
       const { data: { session }, error } = await supabase.auth.getSession()
 
       if (error) {
-        console.error('Supabase session error:', error)
         return {}
       }
 
       if (!session) {
-        console.warn('No active session found')
         return {}
       }
 
       if (!session.access_token) {
-        console.warn('Session exists but no access token')
         return {}
       }
 
-      console.log('Using auth token for request')
       return {
         Authorization: `Bearer ${session.access_token}`
       }
     } catch (error) {
-      console.error('Failed to get auth token:', error)
       return {}
     }
   }
@@ -56,17 +51,10 @@ class ApiService {
     }
 
     try {
-      console.log(`Making ${options.method || 'GET'} request to: ${url}`)
       const response = await fetch(url, config)
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-
-        // Handle specific HTTP status codes
-        if (response.status === 401) {
-          console.error('Authentication failed - token might be expired')
-          // Optionally trigger logout here
-        }
 
         const error = new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
         error.status = response.status
@@ -75,18 +63,8 @@ class ApiService {
       }
 
       const data = await response.json()
-      console.log(`Request successful: ${endpoint}`)
       return data
     } catch (error) {
-      // Enhanced error logging
-      console.error('API request failed:', {
-        endpoint,
-        method: options.method || 'GET',
-        error: error.message,
-        status: error.status,
-        stack: error.stack
-      })
-
       // Re-throw with additional context
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         throw new Error('Network error: Please check your internet connection')
@@ -368,19 +346,14 @@ class ApiService {
 
 // Error handling utilities
 export const handleApiError = (error, context = '') => {
-  console.error(`API Error ${context}:`, error)
-
   // Handle specific error types
   if (error.status === 401) {
     // Token expired or invalid - redirect to login
-    console.warn('Authentication error - user needs to log in again')
     // You could trigger a logout here or redirect to login
   } else if (error.status === 403) {
     // Permission denied
-    console.warn('Permission denied for this action')
   } else if (error.status >= 500) {
     // Server error
-    console.error('Server error occurred')
   }
 
   return error

@@ -123,50 +123,61 @@ const ChatPage = () => {
           }
           
           if (newMessage.user_id === user?.id) {
-            console.log('📡 Message from current user, skipping to avoid duplicates')
             return
           }
-          
-          console.log('📡 Processing message from user_id:', newMessage.user_id)
           
           // Handle content field mapping
           if (chatTable === 'chat_messages' && newMessage.message) {
             newMessage.content = newMessage.message
           }
           
-          // If it's a bot message, add the bot profile info
-          if (newMessage.user_id === 'bot') {
-            console.log('📡 Bot message detected, adding profile')
-            newMessage.profiles = {
-              full_name: '🤖 PlanPal Bot',
-              avatar_url: null
-            }
-          } else {
-            // Fetch profile for regular users if not present
-            if (!newMessage.profiles) {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('full_name, avatar_url')
-                .eq('id', newMessage.user_id)
-                .single()
-              
-              if (profile) {
-                newMessage.profiles = profile
+          // Always fetch profile data for the message sender
+          const fetchProfileAndAddMessage = async () => {
+            // If it's a bot message, add the bot profile info
+            if (newMessage.user_id === 'bot' || newMessage.message_type === 'system') {
+              newMessage.profiles = {
+                full_name: '🤖 PlanPal Bot',
+                avatar_url: null
+              }
+            } else if (newMessage.user_id) {
+              // Always fetch profile for regular users to ensure we have latest data
+              try {
+                const { data: profile, error: profileError } = await supabase
+                  .from('profiles')
+                  .select('id, full_name, avatar_url, username')
+                  .eq('id', newMessage.user_id)
+                  .single()
+                
+                if (!profileError && profile) {
+                  newMessage.profiles = profile
+                } else {
+                  console.error('Failed to fetch profile for user:', newMessage.user_id, profileError)
+                  // Set a default profile if fetch fails
+                  newMessage.profiles = {
+                    full_name: 'Unknown User',
+                    avatar_url: null
+                  }
+                }
+              } catch (error) {
+                console.error('Error fetching profile:', error)
+                newMessage.profiles = {
+                  full_name: 'Unknown User',
+                  avatar_url: null
+                }
               }
             }
+            
+            // Add message to state
+            setMessages(prev => {
+              const exists = prev.some(m => m.id === newMessage.id)
+              if (exists) {
+                return prev
+              }
+              return [...prev, newMessage]
+            })
           }
           
-          console.log('📡 Adding message to state:', newMessage)
-          
-          setMessages(prev => {
-            const exists = prev.some(m => m.id === newMessage.id)
-            if (exists) {
-              console.log('📡 Message already exists (id:', newMessage.id, '), not adding duplicate')
-              return prev
-            }
-            console.log('📡 Message added to array (id:', newMessage.id, ')')
-            return [...prev, newMessage]
-          })
+          fetchProfileAndAddMessage()
         }
       )
       .subscribe();
@@ -364,13 +375,27 @@ const ChatPage = () => {
       const { data, error } = await supabase
         .from(chatTable)
         .insert([insertPayload])
-        .select(chatTable === 'chat_messages'
-          ? 'id, group_id, user_id, content:message, message_type, created_at, profiles(full_name, avatar_url)'
-          : 'id, group_id, user_id, content, attachment_url, created_at, profiles(full_name, avatar_url)'
-        )
+        .select()
         .single()
 
       if (error) throw error
+
+      // Fetch user profile to attach to the message
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, username')
+        .eq('id', userId)
+        .single()
+
+      // Attach profile to message
+      if (userProfile) {
+        data.profiles = userProfile
+      }
+
+      // Handle content field mapping
+      if (chatTable === 'chat_messages' && data.message) {
+        data.content = data.message
+      }
 
       // Optimistic add; realtime will also deliver it
       setMessages(prev => {

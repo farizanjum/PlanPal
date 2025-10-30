@@ -17,15 +17,12 @@ const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
 const authenticateUser = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    console.log('Auth header received:', authHeader ? 'present' : 'missing');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('Invalid auth header format');
       return res.status(401).json({ error: 'Authorization header missing or invalid' });
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    console.log('Token extracted, length:', token.length);
 
     // Verify the JWT token with Supabase
     const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
@@ -36,11 +33,9 @@ const authenticateUser = async (req, res, next) => {
     }
 
     if (!user) {
-      console.log('No user returned from token verification');
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    console.log('Authentication successful for user:', user.id);
     // Add user to request object
     req.user = user;
     next();

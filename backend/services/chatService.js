@@ -4,7 +4,8 @@ const { supabase } = require('../config/supabase');
  * Send a message to a group chat
  */
 const sendMessage = async (userId, groupId, message, messageType = 'text') => {
-  const { data, error } = await supabase
+  // First, insert the message
+  const { data: insertedMessage, error: insertError } = await supabase
     .from('chat_messages')
     .insert({
       group_id: groupId,
@@ -12,17 +13,31 @@ const sendMessage = async (userId, groupId, message, messageType = 'text') => {
       message: message,
       message_type: messageType
     })
+    .select('*')
+    .single();
+
+  if (insertError) {
+    console.error('Failed to insert message:', insertError);
+    throw new Error('Failed to send message');
+  }
+
+  // Then fetch the message with profile data
+  const { data, error } = await supabase
+    .from('chat_messages')
     .select(`
       *,
-      profiles:user_id (
+      profiles!user_id (
         full_name,
         avatar_url
       )
     `)
+    .eq('id', insertedMessage.id)
     .single();
 
   if (error) {
-    throw new Error('Failed to send message');
+    console.error('Failed to fetch message with profile:', error);
+    // Return the message without profile data as fallback
+    return insertedMessage;
   }
 
   return data;
@@ -36,9 +51,11 @@ const getGroupMessages = async (groupId, limit = 50, offset = 0) => {
     .from('chat_messages')
     .select(`
       *,
-      profiles:user_id (
+      profiles!user_id (
+        id,
         full_name,
-        avatar_url
+        avatar_url,
+        username
       )
     `)
     .eq('group_id', groupId)
@@ -46,6 +63,7 @@ const getGroupMessages = async (groupId, limit = 50, offset = 0) => {
     .range(offset, offset + limit - 1);
 
   if (error) {
+    console.error('Failed to fetch messages:', error);
     throw new Error('Failed to fetch messages');
   }
 
@@ -64,9 +82,11 @@ const getRecentMessages = async (groupId) => {
     .from('chat_messages')
     .select(`
       *,
-      profiles:user_id (
+      profiles!user_id (
+        id,
         full_name,
-        avatar_url
+        avatar_url,
+        username
       )
     `)
     .eq('group_id', groupId)
@@ -74,6 +94,7 @@ const getRecentMessages = async (groupId) => {
     .order('created_at', { ascending: true });
 
   if (error) {
+    console.error('Failed to fetch recent messages:', error);
     throw new Error('Failed to fetch recent messages');
   }
 

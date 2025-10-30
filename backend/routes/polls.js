@@ -107,7 +107,7 @@ router.post('/:poll_id/vote', authenticateUser, async (req, res) => {
     res.status(201).json({
       id: vote.id,
       poll_id: vote.poll_id,
-      user_id: vote.user.id,
+      user_id: vote.user_id,
       option_id: vote.option_id,
       created_at: vote.created_at
     });

@@ -12,12 +12,24 @@ const SuggestionsPage = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [sortBy, setSortBy] = useState('rating')
-  const [moodFilter, setMoodFilter] = useState('chill')
+  const [moodFilter, setMoodFilter] = useState(() => {
+    // Initialize mood filter from localStorage
+    const storedMood = localStorage.getItem('userMood')
+    return storedMood || 'chill'
+  })
   const [favorites, setFavorites] = useState(new Set())
   const [showSortDropdown, setShowSortDropdown] = useState(false)
   const [suggestions, setSuggestions] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [suggestionType, setSuggestionType] = useState('movies') // 'movies' or 'places'
+  const [suggestionType, setSuggestionType] = useState(() => {
+    // Initialize suggestion type from localStorage
+    const storedType = localStorage.getItem('suggestionType')
+    // Clear the stored type after reading it
+    if (storedType) {
+      localStorage.removeItem('suggestionType')
+    }
+    return storedType || 'movies'
+  })
   const [filteredSuggestions, setFilteredSuggestions] = useState([])
   const [locationPermission, setLocationPermission] = useState(null)
   const [userLocation, setUserLocation] = useState(null)

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Users, Calendar, ArrowRight, Settings, X, CheckCircle, Clock, Sparkles, MapPin } from 'lucide-react'
+import { Plus, Users, Calendar, ArrowRight, Settings, X, CheckCircle, Clock, Sparkles, MapPin, Smile } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
@@ -42,15 +42,25 @@ const DashboardPage = () => {
   const [isJoining, setIsJoining] = useState(false)
   const [groupTypeFilter, setGroupTypeFilter] = useState('all') // 'all', 'personal', 'work'
   const [newGroupType, setNewGroupType] = useState('personal') // 'personal' or 'work'
+  const [currentMood, setCurrentMood] = useState(() => localStorage.getItem('userMood'))
+
+  // Function to handle mood change button click
+  const handleChangeMood = () => {
+    setShowMoodModal(true)
+  }
+
+  // Update current mood when it changes in localStorage
+  useEffect(() => {
+    const mood = localStorage.getItem('userMood')
+    setCurrentMood(mood)
+  }, [showMoodModal])
 
   // Fetch groups from API
   useEffect(() => {
     const fetchGroups = async () => {
       try {
         setIsLoading(true)
-        console.log('Fetching groups for user:', user?.id)
         const groupsData = await apiService.getUserGroups()
-        console.log('Groups data received:', groupsData)
         setGroups(groupsData)
       } catch (error) {
         console.error('Failed to fetch groups:', error)
@@ -61,10 +71,8 @@ const DashboardPage = () => {
     }
 
     if (user) {
-      console.log('User is authenticated, fetching groups...')
       fetchGroups()
     } else {
-      console.log('No authenticated user, skipping group fetch')
       setIsLoading(false)
     }
   }, [user])
@@ -202,33 +210,40 @@ const DashboardPage = () => {
 
   // Show mood modal on first visit or when explicitly requested
   useEffect(() => {
-    // For testing, always show the mood modal
-    localStorage.removeItem('hasSeenMoodModal')
-    localStorage.removeItem('userMood')
-    localStorage.removeItem('userLocation')
-
     const hasSeenMoodModal = localStorage.getItem('hasSeenMoodModal')
     const userMood = localStorage.getItem('userMood')
 
-    // Show mood modal if user hasn't completed the flow
+    // Show mood modal only if user hasn't completed the flow
     if (!userMood || !hasSeenMoodModal) {
-      console.log('Showing mood modal - userMood:', userMood, 'hasSeenMoodModal:', hasSeenMoodModal)
       setTimeout(() => setShowMoodModal(true), 500)
-    } else {
-      console.log('Skipping mood modal - flow already completed')
     }
   }, [])
 
   const handleMoodSelect = (mood) => {
     setSelectedMood(mood.id)
+    setCurrentMood(mood.id)
     localStorage.setItem('userMood', mood.id)
     setShowMoodModal(false)
-    setShowLocationModal(true)
+    
+    // If foodie is selected, redirect to suggestions page with places/restaurants
+    if (mood.id === 'foodie') {
+      localStorage.setItem('hasSeenMoodModal', 'true')
+      localStorage.setItem('suggestionType', 'places')
+      navigate('/suggestions')
+      toast.success('Let\'s find some great restaurants for you!')
+    } else {
+      // For mood changes (not first time), just show success message
+      const isFirstTime = !localStorage.getItem('hasSeenMoodModal')
+      if (isFirstTime) {
+        setShowLocationModal(true)
+      } else {
+        toast.success(`Mood updated to ${mood.label}! Check out suggestions for new ideas.`)
+      }
+    }
   }
 
   const handleLocationRequest = async () => {
     setIsGettingLocation(true)
-    console.log('Requesting user location...')
 
     try {
       if (!navigator.geolocation) {
@@ -237,17 +252,14 @@ const DashboardPage = () => {
 
       // Check if we already have permission
       const permission = await navigator.permissions.query({ name: 'geolocation' })
-      console.log('Geolocation permission:', permission.state)
 
       if (permission.state === 'denied') {
         throw new Error('Location permission denied')
       }
 
       const position = await new Promise((resolve, reject) => {
-        console.log('Calling getCurrentPosition...')
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            console.log('Location received:', pos.coords)
             resolve(pos)
           },
           (err) => {
@@ -269,7 +281,6 @@ const DashboardPage = () => {
         timestamp: position.timestamp
       }
 
-      console.log('Location saved:', location)
       setUserLocation(location)
       localStorage.setItem('userLocation', JSON.stringify(location))
       localStorage.setItem('hasSeenMoodModal', 'true')
@@ -403,10 +414,40 @@ const DashboardPage = () => {
                   <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl">
                     Manage your planning groups and start new adventures with friends
                   </p>
+                  
+                  {/* Current Mood Display */}
+                  {currentMood && (
+                    <div className="mt-4 flex items-center space-x-3">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Current mood:</span>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleChangeMood}
+                        className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-lg"
+                      >
+                        <Smile size={18} />
+                        <span className="font-medium capitalize">{currentMood}</span>
+                        <span className="text-xs opacity-75">(Click to change)</span>
+                      </motion.button>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Action buttons with consistent styling */}
                 <div className="flex flex-col sm:flex-row gap-3">
+                  {!currentMood && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleChangeMood}
+                      className="flex items-center justify-center space-x-2 px-6 py-3 border-2 border-purple-500 text-purple-500 hover:bg-purple-500 hover:text-white rounded-xl transition-all duration-300 font-medium shadow-sm hover:shadow-md"
+                      aria-label="Set your mood preference"
+                    >
+                      <Smile size={18} />
+                      <span>Set Mood</span>
+                    </motion.button>
+                  )}
+                  
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
