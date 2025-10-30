@@ -351,7 +351,11 @@ const GroupDetailPage = () => {
         }))
       }
 
-      await apiService.createPoll(pollData)
+      const newPoll = await apiService.createPoll(pollData)
+
+      // Fetch updated polls to ensure we have the latest data
+      const updatedPolls = await apiService.getPollsByEvent(eventId)
+      setPolls(updatedPolls || [])
 
       // Reset form
       setPollForm({

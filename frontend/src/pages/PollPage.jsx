@@ -24,33 +24,33 @@ const PollPage = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true)
-        const [pollsData, eventsData] = await Promise.all([
-          apiService.getEventsByGroup(groupId).then(events => {
-            // Get the first event and fetch its polls
-            if (events.length > 0) {
-              return apiService.getPollsByEvent(events[0].id)
-            }
-            return []
-          }),
-          apiService.getEventsByGroup(groupId)
-        ])
-        setPolls(pollsData)
+        const eventsData = await apiService.getEventsByGroup(groupId)
         setEvents(eventsData)
 
-        // Initialize vote tracking
+        // Get polls for the first event
+        let pollsData = []
+        if (eventsData.length > 0) {
+          pollsData = await apiService.getPollsByEvent(eventsData[0].id)
+        }
+        
+        setPolls(pollsData)
+
+        // Initialize vote tracking from backend data
         const voteMap = {}
         const hasVotedMap = {}
         pollsData.forEach(poll => {
-          // Count votes for each option
+          // Use vote_counts from backend
           const optionCounts = {}
           poll.options.forEach(option => {
-            optionCounts[option.id] = { count: 0, label: option.label }
+            optionCounts[option.id] = { 
+              count: poll.vote_counts?.[option.id] || 0, 
+              label: option.label 
+            }
           })
 
-          // TODO: In a real implementation, you'd fetch actual votes from the backend
-          // For now, we'll show the poll structure
           voteMap[poll.id] = optionCounts
-          hasVotedMap[poll.id] = false // Assume user hasn't voted
+          // Check if user has already voted
+          hasVotedMap[poll.id] = !!poll.user_vote
         })
 
         setVotes(voteMap)
@@ -75,18 +75,28 @@ const PollPage = () => {
     try {
       await apiService.castVote(pollId, { option_id: optionId })
 
-      // Update local state
-      setVotes(prev => ({
-        ...prev,
-        [pollId]: {
-          ...prev[pollId],
-          [optionId]: {
-            ...prev[pollId][optionId],
-            count: prev[pollId][optionId].count + 1
-          }
-        }
-      }))
-      setHasVoted(prev => ({ ...prev, [pollId]: true }))
+      // Refresh poll data to get updated vote counts
+      if (events.length > 0) {
+        const updatedPolls = await apiService.getPollsByEvent(events[0].id)
+        setPolls(updatedPolls)
+
+        // Update vote tracking from refreshed data
+        const voteMap = {}
+        const hasVotedMap = {}
+        updatedPolls.forEach(poll => {
+          const optionCounts = {}
+          poll.options.forEach(option => {
+            optionCounts[option.id] = { 
+              count: poll.vote_counts?.[option.id] || 0, 
+              label: option.label 
+            }
+          })
+          voteMap[poll.id] = optionCounts
+          hasVotedMap[poll.id] = !!poll.user_vote
+        })
+        setVotes(voteMap)
+        setHasVoted(hasVotedMap)
+      }
 
       toast.success('Vote cast successfully!')
     } catch (error) {
