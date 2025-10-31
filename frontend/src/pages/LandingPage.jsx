@@ -107,25 +107,6 @@ const LandingPage = () => {
                   <ArrowRight size={20} />
                 </button>
               </div>
-
-              <div className="mt-10 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl px-5 py-4">
-                  <p className="text-sm uppercase tracking-[0.25em] text-white/60">This week</p>
-                  <p className="mt-2 text-3xl font-semibold text-white">128+</p>
-                  <p className="mt-2 flex items-center gap-2 text-sm text-emerald-200">
-                    <Sparkles size={16} />
-                    New groups planning get-togethers
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl px-5 py-4">
-                  <p className="text-sm uppercase tracking-[0.25em] text-white/60">Decision speed</p>
-                  <p className="mt-2 text-3xl font-semibold text-white">6× faster</p>
-                  <p className="mt-2 flex items-center gap-2 text-sm text-white/75">
-                    <CheckCircle size={16} className="text-secondary-200" />
-                    Polls and RSVPs settled in minutes
-                  </p>
-                </div>
-              </div>
             </motion.div>
 
             <motion.div
