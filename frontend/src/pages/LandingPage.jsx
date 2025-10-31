@@ -32,6 +32,12 @@ const LandingPage = () => {
     smoothScrollTo(0, { duration: 1 })
   }
 
+  const handleExploreHowItWorks = () => {
+    if (featuresSectionRef.current) {
+      featuresSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-zinc-900">
       <Navbar />
@@ -125,108 +131,124 @@ const LandingPage = () => {
       <section 
         id="how-it-works"
         ref={featuresSectionRef}
-        className="section-container section-padding bg-white dark:bg-zinc-800"
+        className="relative overflow-hidden py-24"
       >
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            How It <span className="bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent">Works</span>
-          </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Planning your next adventure is as easy as one, two, three
-          </p>
-        </motion.div>
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-zinc-900 to-slate-950 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900" />
+        <div className="absolute inset-x-0 -top-24 h-64 bg-gradient-to-b from-primary-500/30 via-secondary-500/20 to-transparent blur-3xl" />
+        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[120%] md:w-3/4 bg-white/5 dark:bg-white/5 blur-3xl opacity-40" />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Step 1 */}
+        <div className="relative max-w-6xl mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
+            transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            whileHover={{ scale: 1.05, y: -5 }}
-            className="card p-8 text-center relative"
+            className="text-center mb-16"
           >
-            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-primary-500 text-white rounded-full flex items-center justify-center font-bold">
-              1
-            </div>
-            <div className="w-16 h-16 bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Users className="text-white" size={32} />
-            </div>
-            <h3 className="text-2xl font-semibold mb-3">Create Group</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Start a group and invite friends to plan your next adventure together.
+            <span className="inline-flex items-center px-4 py-1 rounded-full bg-white/10 border border-white/20 text-sm font-medium text-white/80 uppercase tracking-[0.2em] mb-6">
+              PlanPal in Action
+            </span>
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              How It <span className="bg-gradient-to-r from-primary-300 to-secondary-300 bg-clip-text text-transparent">Works</span>
+            </h2>
+            <p className="text-lg text-white/70 max-w-2xl mx-auto">
+              Planning your next adventure is as easy as one, two, three. Follow the journey below to see PlanPal in motion.
             </p>
           </motion.div>
 
-          {/* Step 2 */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            viewport={{ once: true }}
-            whileHover={{ scale: 1.05, y: -5 }}
-            className="card p-8 text-center relative"
-          >
-            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-secondary-500 text-white rounded-full flex items-center justify-center font-bold">
-              2
-            </div>
-            <div className="w-16 h-16 bg-gradient-to-r from-secondary-500 to-secondary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Vote className="text-white" size={32} />
-            </div>
-            <h3 className="text-2xl font-semibold mb-3">Vote & Decide</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Let everyone vote on options and make democratic decisions effortlessly.
-            </p>
-          </motion.div>
+          <div className="relative">
+            <div className="hidden md:block absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-y-1/2" />
 
-          {/* Step 3 */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            viewport={{ once: true }}
-            whileHover={{ scale: 1.05, y: -5 }}
-            className="card p-8 text-center relative"
-          >
-            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">
-              3
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
+              {[{
+                id: 1,
+                title: 'Create Group',
+                description: 'Start a group, drop in your ideas, and invite friends to dream up the perfect outing together.',
+                icon: <Users className="text-white" size={36} />,
+                accent: 'from-primary-500 to-primary-600'
+              }, {
+                id: 2,
+                title: 'Vote & Decide',
+                description: 'Share polls, collect RSVPs, and make democratic decisions without endless chat threads.',
+                icon: <Vote className="text-white" size={36} />,
+                accent: 'from-secondary-500 to-secondary-600'
+              }, {
+                id: 3,
+                title: 'Go Out',
+                description: 'Get AI-powered suggestions, finalize the plan, and have everything your group needs in one place.',
+                icon: <MapPin className="text-white" size={36} />,
+                accent: 'from-emerald-500 via-teal-500 to-cyan-500'
+              }].map((step, index) => (
+                <motion.div
+                  key={step.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 * index }}
+                  viewport={{ once: true }}
+                  whileHover={{ y: -8, scale: 1.03 }}
+                  className="relative group"
+                >
+                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-white text-slate-900 dark:text-slate-900 rounded-full flex items-center justify-center font-bold shadow-xl shadow-primary-500/10">
+                    {step.id}
+                  </div>
+                  <div className="relative h-full rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 transition-all duration-300 group-hover:border-white/20 group-hover:bg-white/10">
+                    <div className={`w-16 h-16 rounded-3xl bg-gradient-to-br ${step.accent} flex items-center justify-center mb-5 shadow-lg shadow-primary-900/20`}> 
+                      {step.icon}
+                    </div>
+                    <h3 className="text-2xl font-semibold text-white mb-3">
+                      {step.title}
+                    </h3>
+                    <p className="text-white/70 leading-relaxed">
+                      {step.description}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
             </div>
-            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <MapPin className="text-white" size={32} />
-            </div>
-            <h3 className="text-2xl font-semibold mb-3">Go Out</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Get smart suggestions and finalize your perfect plan with all the details.
-            </p>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="section-container section-padding bg-gradient-to-r from-primary-500 to-secondary-500">
+      <section className="py-24 px-6">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center"
+          className="relative max-w-5xl mx-auto overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-primary-500 via-secondary-500 to-primary-500 text-white shadow-2xl"
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to plan your next adventure?
-          </h2>
-          <p className="text-lg text-white/90 mb-8">
-            Join thousands of groups already planning amazing experiences together
-          </p>
-          <Link to={user ? "/dashboard" : "/register"} className="inline-flex items-center space-x-2 bg-white text-primary-600 hover:bg-gray-100 font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <span>{user ? "Go to Dashboard" : "Get Started Free"}</span>
-            <ArrowRight size={20} />
-          </Link>
+          <div className="absolute inset-0 opacity-40">
+            <div className="absolute -inset-24 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.35),_transparent_60%)]" />
+          </div>
+
+          <div className="relative px-8 py-16 md:px-12 md:py-20 text-center space-y-6">
+            <span className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-white/20 text-sm font-medium uppercase tracking-[0.25em]">
+              You bring the people, we plan the fun
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold">
+              Ready to plan your next adventure?
+            </h2>
+            <p className="text-lg text-white/85 max-w-3xl mx-auto">
+              Join thousands of planners already using PlanPal to choose the perfect spot, lock in decisions, and keep everyone excited from invite to outing.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+              <Link
+                to={user ? "/dashboard" : "/register"}
+                className="inline-flex items-center space-x-2 bg-white text-primary-600 hover:bg-gray-100 font-semibold py-3.5 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+              >
+                <span>{user ? "Go to Dashboard" : "Get Started Free"}</span>
+                <ArrowRight size={20} />
+              </Link>
+              <button
+                type="button"
+                onClick={handleExploreHowItWorks}
+                className="inline-flex items-center space-x-2 border border-white/40 text-white hover:bg-white/10 font-semibold py-3.5 px-8 rounded-xl transition-all duration-300"
+              >
+                <span>See how it works</span>
+              </button>
+            </div>
+          </div>
         </motion.div>
       </section>
 
