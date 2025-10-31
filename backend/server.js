@@ -7,6 +7,12 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 8000;
 
+if (process.env.NODE_ENV === 'production') {
+  ['log', 'info', 'debug'].forEach((method) => {
+    console[method] = () => {};
+  });
+}
+
 // Import routes
 const groupRoutes = require('./routes/groups');
 const eventRoutes = require('./routes/events');
