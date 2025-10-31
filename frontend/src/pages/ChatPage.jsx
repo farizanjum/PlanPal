@@ -164,6 +164,37 @@ const ChatPage = () => {
     return normalized
   }, [ensureProfileForUser, updateProfileCache])
 
+  const resolveProfileName = useCallback((message) => {
+    if (!message) {
+      return 'Unknown User'
+    }
+
+    if (message.user_id === user?.id) {
+      return 'You'
+    }
+
+    if (message.user_id === 'bot' || message.message_type === 'system') {
+      return '🤖 PlanPal Bot'
+    }
+
+    const profile = message.profiles || {}
+    return profile.full_name || profile.username || profile.email || message.sender || 'Unknown User'
+  }, [user?.id])
+
+  const resolveProfileInitial = useCallback((message) => {
+    if (!message) {
+      return 'U'
+    }
+
+    if (message.user_id === 'bot' || message.message_type === 'system') {
+      return '🤖'
+    }
+
+    const profile = message.profiles || {}
+    const seed = profile.full_name || profile.username || profile.email || message.sender || 'U'
+    return seed.trim().charAt(0).toUpperCase() || 'U'
+  }, [])
+
   useEffect(() => {
     memberProfilesRef.current = memberProfiles
   }, [memberProfiles])
@@ -734,14 +765,14 @@ const ChatPage = () => {
                             <span className="text-2xl">🤖</span>
                           ) : (
                             <span className="text-white font-bold text-sm">
-                              {((msg.profiles?.full_name || msg.sender || 'U')[0]).toUpperCase()}
+                              {resolveProfileInitial(msg)}
                             </span>
                           )}
                         </motion.div>
                         <div className={`flex-1 ${(msg.user_id === user?.id) ? 'flex flex-col items-end' : ''}`}>
                           <div className="flex items-center space-x-2 mb-1">
                             <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                              {msg.user_id === 'bot' ? '🤖 PlanPal Bot' : (msg.user_id === user?.id ? 'You' : (msg.profiles?.full_name || msg.sender || 'Unknown User'))}
+                              {resolveProfileName(msg)}
                             </span>
                             <span className="text-xs text-gray-500 dark:text-gray-400">
                               {msg.created_at ? formatMessageTime(msg.created_at) : msg.timestamp}
