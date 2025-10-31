@@ -1,4 +1,33 @@
-const { createUserClient } = require('../config/supabase');
+const { createUserClient, supabase } = require('../config/supabase');
+
+const ensureProfileExists = async (userId) => {
+  if (!userId) {
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Failed to verify profile:', error);
+    throw new Error('Unable to verify user profile');
+  }
+
+  if (error && error.code === 'PGRST116') {
+    const { error: insertError } = await supabase
+      .from('profiles')
+      .insert({ id: userId })
+      .single();
+
+    if (insertError) {
+      console.error('Failed to create missing profile:', insertError);
+      throw new Error('Unable to create user profile');
+    }
+  }
+};
 
 /**
  * Create a new poll for an event
@@ -21,7 +50,9 @@ const createPoll = async (userId, pollData, userToken) => {
     throw new Error('Event not found');
   }
 
-  if (!eventData.groups.members.includes(userId)) {
+  const members = Array.isArray(eventData.groups?.members) ? eventData.groups.members : [];
+
+  if (!members.includes(userId)) {
     throw new Error('Access denied: You are not a member of this group');
   }
 
@@ -73,7 +104,9 @@ const getPollsByEventId = async (eventId, userId, userToken) => {
     throw new Error('Event not found');
   }
 
-  if (!eventData.groups.members.includes(userId)) {
+  const members = Array.isArray(eventData.groups?.members) ? eventData.groups.members : [];
+
+  if (!members.includes(userId)) {
     throw new Error('Access denied: You are not a member of this group');
   }
 
@@ -150,7 +183,9 @@ const castVote = async (userId, pollId, optionId, userToken) => {
     throw new Error('Poll not found');
   }
 
-  if (!pollData.events.groups.members.includes(userId)) {
+  const members = Array.isArray(pollData.events?.groups?.members) ? pollData.events.groups.members : [];
+
+  if (!members.includes(userId)) {
     throw new Error('Access denied: You are not a member of this group');
   }
 
@@ -174,6 +209,8 @@ const castVote = async (userId, pollId, optionId, userToken) => {
 
   if (existingVote) {
     // Update existing vote
+    await ensureProfileExists(userId);
+
     const { data, error } = await supabase
       .from('votes')
       .update({ option_id: optionId })
@@ -189,6 +226,8 @@ const castVote = async (userId, pollId, optionId, userToken) => {
     return data;
   } else {
     // Insert new vote
+    await ensureProfileExists(userId);
+
     const { data, error } = await supabase
       .from('votes')
       .insert({

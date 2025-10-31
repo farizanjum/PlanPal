@@ -50,7 +50,9 @@ router.post('/:groupId/messages', authenticateUser, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    if (!groupData.members.includes(req.user.id)) {
+    const members = Array.isArray(groupData.members) ? groupData.members : [];
+
+    if (!members.includes(req.user.id)) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -118,7 +120,9 @@ router.get('/:groupId/messages', authenticateUser, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    if (!groupData.members.includes(req.user.id)) {
+    const members = Array.isArray(groupData.members) ? groupData.members : [];
+
+    if (!members.includes(req.user.id)) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -161,7 +165,9 @@ router.get('/:groupId/recent', authenticateUser, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    if (!groupData.members.includes(req.user.id)) {
+    const members = Array.isArray(groupData.members) ? groupData.members : [];
+
+    if (!members.includes(req.user.id)) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
