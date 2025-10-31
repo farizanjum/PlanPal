@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Users, Vote, MapPin, CheckCircle, ArrowRight, Sparkles } from 'lucide-react'
 import Navbar from '../components/Navbar'
@@ -11,6 +11,14 @@ const LandingPage = () => {
   const heroSectionRef = useRef(null)
   const featuresSectionRef = useRef(null)
   const { user } = useAuth()
+  const heroEmojis = [
+    { emoji: '🎉', left: '12%', top: '18%' },
+    { emoji: '🎬', left: '70%', top: '22%' },
+    { emoji: '🍕', left: '20%', top: '65%' },
+    { emoji: '🎯', left: '82%', top: '55%' },
+    { emoji: '🌟', left: '42%', top: '12%' },
+    { emoji: '🎵', left: '58%', top: '72%' }
+  ]
 
   useEffect(() => {
     // Add scroll-triggered animations to sections
@@ -28,15 +36,9 @@ const LandingPage = () => {
     })
   }, [])
 
-  const handleGetStarted = () => {
-    smoothScrollTo(0, { duration: 1 })
-  }
-
-  const handleExploreHowItWorks = () => {
-    if (featuresSectionRef.current) {
-      featuresSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }
+  const handleExploreHowItWorks = useCallback(() => {
+    smoothScrollTo('#how-it-works', { offset: -80, duration: 1.1 })
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-zinc-900">
@@ -45,83 +47,174 @@ const LandingPage = () => {
       {/* Hero Section */}
       <section 
         ref={heroSectionRef}
-        className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900"
+        className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white py-24 md:py-28"
       >
-        {/* Floating Emojis Background */}
         <div className="absolute inset-0 pointer-events-none">
-          {['🎉', '🎬', '🍕', '🎯', '🌟', '🎪', '🎨', '🎵'].map((emoji, index) => (
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_65%)]" />
+          <div className="absolute -top-32 -left-24 w-72 h-72 bg-primary-500/35 blur-3xl rounded-full" />
+          <div className="absolute -bottom-32 -right-28 w-80 h-80 bg-secondary-500/35 blur-3xl rounded-full" />
+        </div>
+
+        <div className="absolute inset-0 pointer-events-none">
+          {heroEmojis.map((item, index) => (
             <motion.div
-              key={index}
-              className="absolute text-4xl opacity-20"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-              }}
-              animate={{
-                y: [0, -30, 0],
-                rotate: [0, 15, -15, 0],
-              }}
-              transition={{
-                duration: 4 + Math.random() * 2,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
+              key={item.emoji + index}
+              className="absolute text-4xl md:text-5xl text-white/15"
+              style={{ left: item.left, top: item.top }}
+              animate={{ y: [0, -12, 0], rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 6, repeat: Infinity, delay: index * 0.8 }}
             >
-              {emoji}
+              {item.emoji}
             </motion.div>
           ))}
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h1 className="text-5xl md:text-7xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent">
-                Plan Smarter.
+        <div className="relative max-w-6xl mx-auto px-6">
+          <div className="grid items-center gap-12 md:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="text-left"
+            >
+              <span className="inline-flex items-center px-4 py-1 rounded-full bg-white/10 border border-white/20 text-sm font-medium tracking-[0.25em] uppercase text-white/70">
+                AI + Group Planning
               </span>
-              <br />
-              <span className="text-gray-800 dark:text-white">Chill Together.</span>
-            </h1>
-            
-            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Coordinate outings with ease using AI and group votes. 
-              Make decisions together, discover new places, and create unforgettable memories.
-            </p>
+              <h1 className="mt-6 text-4xl md:text-6xl lg:text-[4.5rem] font-bold leading-tight">
+                <span className="bg-gradient-to-r from-primary-300 via-secondary-200 to-primary-300 bg-clip-text text-transparent">
+                  Plan smarter.
+                </span>
+                <br />
+                <span className="text-white">Chill together.</span>
+              </h1>
+              <p className="mt-6 text-lg md:text-xl text-white/80 max-w-xl">
+                Coordinate outings with AI-powered suggestions, instant polls, and live group collaboration. Make decisions together, discover new places, and keep every detail in sync.
+              </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-              <Link to={user ? "/dashboard" : "/register"} className="btn-primary text-lg px-8 py-4">
-                {user ? "Dashboard" : "Get Started"}
-              </Link>
-              <button 
-                onClick={() => smoothScrollTo('#how-it-works', { offset: -80, duration: 1.5 })}
-                className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-primary-500 transition-colors text-lg"
-              >
-                <span>Learn More</span>
-                <ArrowRight size={20} />
-              </button>
-            </div>
-          </motion.div>
+              <div className="mt-8 flex flex-col sm:flex-row gap-4">
+                <Link
+                  to={user ? "/dashboard" : "/register"}
+                  className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 px-8 py-4 text-lg font-semibold shadow-lg shadow-primary-900/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <span>{user ? "Open Dashboard" : "Start Planning"}</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleExploreHowItWorks}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 px-8 py-4 text-lg font-semibold text-white/80 transition-all duration-300 hover:border-white/60 hover:text-white/100"
+                >
+                  <span>See how it works</span>
+                  <ArrowRight size={20} />
+                </button>
+              </div>
+
+              <div className="mt-10 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl px-5 py-4">
+                  <p className="text-sm uppercase tracking-[0.25em] text-white/60">This week</p>
+                  <p className="mt-2 text-3xl font-semibold text-white">128+</p>
+                  <p className="mt-2 flex items-center gap-2 text-sm text-emerald-200">
+                    <Sparkles size={16} />
+                    New groups planning get-togethers
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl px-5 py-4">
+                  <p className="text-sm uppercase tracking-[0.25em] text-white/60">Decision speed</p>
+                  <p className="mt-2 text-3xl font-semibold text-white">6× faster</p>
+                  <p className="mt-2 flex items-center gap-2 text-sm text-white/75">
+                    <CheckCircle size={16} className="text-secondary-200" />
+                    Polls and RSVPs settled in minutes
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, delay: 0.2 }}
+              className="relative"
+            >
+              <div className="absolute -inset-6 bg-gradient-to-br from-white/20 via-transparent to-white/5 blur-3xl opacity-40" />
+              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/10 backdrop-blur-2xl p-8 shadow-2xl space-y-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <span className="text-xs uppercase tracking-[0.3em] text-white/60">Live plan</span>
+                    <h3 className="mt-2 text-2xl font-semibold text-white">Friday Night Hangout</h3>
+                    <p className="text-sm text-white/60">Downtown · 7:30 PM</p>
+                  </div>
+                  <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-semibold text-emerald-100">
+                    On track
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  {[
+                    {
+                      title: 'Poll locked in',
+                      detail: 'Rooftop vibes won with 62% of the votes.',
+                      done: true
+                    },
+                    {
+                      title: 'Smart suggestions',
+                      detail: 'Top 3 spots ready for your mood.',
+                      done: true
+                    },
+                    {
+                      title: 'Next up',
+                      detail: 'Share final plan with the group chat.',
+                      done: false
+                    }
+                  ].map((item) => (
+                    <div
+                      key={item.title}
+                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+                    >
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${item.done ? 'bg-emerald-400/20 text-emerald-100' : 'bg-white/10 text-white/70'}`}>
+                        {item.done ? <CheckCircle size={20} /> : <Sparkles size={20} />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{item.title}</p>
+                        <p className="text-xs text-white/65">{item.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col gap-4 border-t border-white/10 pt-6 md:flex-row md:items-center md:justify-between">
+                  <div className="flex -space-x-3">
+                    {['FA', 'JR', 'LS', 'MK'].map((initials) => (
+                      <div
+                        key={initials}
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-sm font-semibold text-white/85"
+                      >
+                        {initials}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-sm text-white/70">
+                    12 friends collaborating in real time
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
 
-        {/* Scroll Indicator */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+          transition={{ delay: 1.4 }}
+          className="absolute bottom-10 left-1/2 -translate-x-1/2"
         >
           <motion.div
             animate={{ y: [0, 10, 0] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="w-6 h-10 border-2 border-gray-400 dark:border-gray-600 rounded-full flex justify-center"
+            className="flex h-12 w-6 items-center justify-center rounded-full border-2 border-white/30"
           >
             <motion.div
               animate={{ y: [0, 12, 0] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="w-1 h-3 bg-gray-400 dark:bg-gray-600 rounded-full mt-2"
+              className="mt-2 h-3 w-1 rounded-full bg-white/50"
             />
           </motion.div>
         </motion.div>
@@ -188,10 +281,11 @@ const LandingPage = () => {
                   whileHover={{ y: -8, scale: 1.03 }}
                   className="relative group"
                 >
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-white text-slate-900 dark:text-slate-900 rounded-full flex items-center justify-center font-bold shadow-xl shadow-primary-500/10">
+                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-900 font-bold shadow-xl shadow-primary-500/20">
                     {step.id}
                   </div>
-                  <div className="relative h-full rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 transition-all duration-300 group-hover:border-white/20 group-hover:bg-white/10">
+                  <div className="absolute -top-3 left-1/2 h-12 w-32 -translate-x-1/2 rounded-full bg-white/20 blur-3xl opacity-60" />
+                  <div className="relative h-full rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl px-8 pt-14 pb-10 transition-all duration-300 group-hover:border-white/20 group-hover:bg-white/10">
                     <div className={`w-16 h-16 rounded-3xl bg-gradient-to-br ${step.accent} flex items-center justify-center mb-5 shadow-lg shadow-primary-900/20`}> 
                       {step.icon}
                     </div>
