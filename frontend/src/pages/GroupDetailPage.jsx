@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Plus, Calendar, MapPin, Users, Clock, Star, Vote, Settings, X, User, Sparkles, Share2, Copy, Check, Heart, Flame, MessageCircle, Trash2 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -42,6 +42,8 @@ const GroupDetailPage = () => {
   const [showCreatePollModal, setShowCreatePollModal] = useState(false)
   const [topMovies, setTopMovies] = useState([])
   const [topPlaces, setTopPlaces] = useState([])
+  const [moviesError, setMoviesError] = useState(null)
+  const [placesError, setPlacesError] = useState(null)
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const [eventRSVPs, setEventRSVPs] = useState({})
   const [eventReactions, setEventReactions] = useState({})
@@ -71,6 +73,36 @@ const GroupDetailPage = () => {
   const [showShareModal, setShowShareModal] = useState(false)
   const [showEventInfoModal, setShowEventInfoModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState(null)
+
+  const movieFallbackMessage = useMemo(() => {
+    if (!moviesError) {
+      return 'No movie recommendations yet. Click "View All" to explore!'
+    }
+
+    const lower = moviesError.toLowerCase()
+    if (lower.includes('tmdb') && lower.includes('api key')) {
+      return 'Movie suggestions need a TMDB API key. Add TMDB_API_KEY to backend/.env and restart the server.'
+    }
+
+    return moviesError
+  }, [moviesError])
+
+  const placesFallbackMessage = useMemo(() => {
+    if (!placesError) {
+      return 'No place recommendations yet. Share your location or click "View All" to explore!'
+    }
+
+    const lower = placesError.toLowerCase()
+    if (lower.includes('google') && lower.includes('api key')) {
+      return 'Place suggestions need a Google Places API key. Add GOOGLE_API_KEY to backend/.env and restart the server.'
+    }
+
+    if (lower.includes('location')) {
+      return 'Share your location to unlock nearby recommendations for your group.'
+    }
+
+    return placesError
+  }, [placesError])
 
   // Handle join code from URL
   useEffect(() => {
@@ -152,29 +184,63 @@ const GroupDetailPage = () => {
           })
         }
         const userMood = localStorage.getItem('userMood') || 'popular'
+        setMoviesError(null)
+        setPlacesError(null)
         
         // Fetch top 5 movies
-        const moviesResponse = await apiService.getMovieSuggestions({ 
-          mood: userMood, 
-          limit: 5 
-        })
-        
-        if (moviesResponse && moviesResponse.results) {
-          setTopMovies(moviesResponse.results.slice(0, 5))
+        try {
+          const moviesResponse = await apiService.getMovieSuggestions({ 
+            mood: userMood, 
+            limit: 5,
+            language: 'en'
+          })
+
+          if (moviesResponse && moviesResponse.results && Array.isArray(moviesResponse.results)) {
+            setTopMovies(moviesResponse.results.slice(0, 5))
+            setMoviesError(null)
+          } else if (moviesResponse && Array.isArray(moviesResponse)) {
+            // Handle case where response is directly the array
+            setTopMovies(moviesResponse.slice(0, 5))
+            setMoviesError(null)
+          } else {
+            setTopMovies([])
+            setMoviesError('No movie recommendations available for the current mood just yet.')
+          }
+        } catch (movieError) {
+          const errorMessage = movieError?.response?.data?.error || movieError.message || 'Failed to fetch movie recommendations.'
+          setMoviesError(errorMessage)
+          setTopMovies([])
         }
         
         // Fetch top 5 places (if location available)
         if (userLocation) {
-          const placesResponse = await apiService.getPlaceSuggestions({
-            lat: userLocation.lat,
-            lng: userLocation.lng,
-            type: 'restaurant',
-            limit: 5
-          })
-          
-          if (placesResponse && placesResponse.results) {
-            setTopPlaces(placesResponse.results.slice(0, 5))
+          try {
+            const placesResponse = await apiService.getPlaceSuggestions({
+              lat: userLocation.lat,
+              lng: userLocation.lng,
+              type: 'restaurant',
+              limit: 5
+            })
+
+            if (placesResponse && placesResponse.results && Array.isArray(placesResponse.results)) {
+              setTopPlaces(placesResponse.results.slice(0, 5))
+              setPlacesError(null)
+            } else if (placesResponse && Array.isArray(placesResponse)) {
+              // Handle case where response is directly the array
+              setTopPlaces(placesResponse.slice(0, 5))
+              setPlacesError(null)
+            } else {
+              setTopPlaces([])
+              setPlacesError('No local recommendations available right now. Try again soon.')
+            }
+          } catch (placeError) {
+            const errorMessage = placeError?.response?.data?.error || placeError.message || 'Failed to fetch nearby place suggestions.'
+            setPlacesError(errorMessage)
+            setTopPlaces([])
           }
+        } else {
+          setTopPlaces([])
+          setPlacesError('Share your location to see nearby recommendations.')
         }
       } catch (error) {
         console.error('Failed to fetch top suggestions:', error)
@@ -904,7 +970,7 @@ const GroupDetailPage = () => {
               ) : (
                 <div className="text-center py-8 bg-gray-50 dark:bg-zinc-800 rounded-xl">
                   <p className="text-gray-600 dark:text-gray-400">
-                    No movie recommendations yet. Click "View All" to explore!
+                    {movieFallbackMessage}
                   </p>
                 </div>
               )}
@@ -965,7 +1031,7 @@ const GroupDetailPage = () => {
               ) : (
                 <div className="text-center py-8 bg-gray-50 dark:bg-zinc-800 rounded-xl">
                   <p className="text-gray-600 dark:text-gray-400">
-                    No place recommendations yet. Enable location and click "View All"!
+                    {placesFallbackMessage}
                   </p>
                 </div>
               )}

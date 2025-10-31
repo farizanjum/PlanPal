@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Send, Smile, Check, CheckCheck, Paperclip } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -30,6 +30,10 @@ const ChatPage = () => {
   const fileInputRef = useRef(null)
   // Supabase realtime broadcast channel
   const channelRef = useRef(null)
+  const [memberProfiles, setMemberProfiles] = useState({})
+  const memberProfilesRef = useRef({})
+  const PAGE_LIMIT = 50
+  const [nextOffset, setNextOffset] = useState(0)
 
   // Typing/emoji UI state
   const [isTyping, setIsTyping] = useState(false)
@@ -40,8 +44,129 @@ const ChatPage = () => {
   const [hasMore, setHasMore] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
 
-  // Table fallback (prefer 'messages'; fallback to legacy 'chat_messages')
-  const [chatTable, setChatTable] = useState('messages')
+  // Chat table name (default to chat_messages, legacy fallback handled dynamically)
+  const [chatTable, setChatTable] = useState('chat_messages')
+
+  const updateProfileCache = useCallback((profiles = []) => {
+    if (!Array.isArray(profiles) || profiles.length === 0) {
+      return memberProfilesRef.current
+    }
+
+    const updatedProfiles = { ...memberProfilesRef.current }
+    let changed = false
+
+    profiles.forEach((profile) => {
+      if (!profile?.id) {
+        return
+      }
+
+      const current = updatedProfiles[profile.id]
+      if (!current || current.full_name !== profile.full_name || current.avatar_url !== profile.avatar_url || current.username !== profile.username) {
+        updatedProfiles[profile.id] = profile
+        changed = true
+      }
+    })
+
+    if (!changed) {
+      return memberProfilesRef.current
+    }
+
+    memberProfilesRef.current = updatedProfiles
+    setMemberProfiles(updatedProfiles)
+    return updatedProfiles
+  }, [])
+
+  const normalizeMessageSync = (message, profileMap = memberProfilesRef.current) => {
+    if (!message) return null
+
+    const normalized = { ...message }
+    normalized.content = message.content || message.message || message.text || ''
+
+    if (normalized.message_type === 'system' || normalized.user_id === 'bot') {
+      normalized.user_id = normalized.user_id || 'bot'
+      normalized.profiles = {
+        full_name: '🤖 PlanPal Bot',
+        avatar_url: null
+      }
+      return normalized
+    }
+
+    if (normalized.user_id && !normalized.profiles && profileMap?.[normalized.user_id]) {
+      normalized.profiles = profileMap[normalized.user_id]
+    }
+
+    return normalized
+  }
+
+  const normalizeMessagesSync = (list = [], profileMap = memberProfilesRef.current) => {
+    if (!Array.isArray(list) || list.length === 0) {
+      return []
+    }
+
+    return list
+      .map((msg) => normalizeMessageSync(msg, profileMap))
+      .filter(Boolean)
+  }
+
+  const ensureProfileForUser = useCallback(async (userId) => {
+    if (!userId) {
+      return null
+    }
+
+    if (userId === 'bot') {
+      return {
+        full_name: '🤖 PlanPal Bot',
+        avatar_url: null
+      }
+    }
+
+    const existing = memberProfilesRef.current[userId]
+    if (existing) {
+      return existing
+    }
+
+    try {
+      const members = await apiService.getGroupMembers(groupId)
+      const updated = updateProfileCache(members || [])
+      return updated[userId] || null
+    } catch (err) {
+      console.error('Failed to fetch profile for user:', userId, err)
+      return null
+    }
+  }, [groupId, updateProfileCache])
+
+  const enrichMessage = useCallback(async (rawMessage) => {
+    const normalized = normalizeMessageSync(rawMessage)
+    if (!normalized) {
+      return null
+    }
+
+    if ((normalized.message_type === 'system' || normalized.user_id === 'bot') && !normalized.profiles) {
+      normalized.profiles = {
+        full_name: '🤖 PlanPal Bot',
+        avatar_url: null
+      }
+      normalized.user_id = normalized.user_id || 'bot'
+      return normalized
+    }
+
+    if (normalized.user_id && !normalized.profiles) {
+      const profile = await ensureProfileForUser(normalized.user_id)
+      if (profile) {
+        normalized.profiles = profile
+      }
+    }
+
+    if (normalized.profiles?.id) {
+      updateProfileCache([normalized.profiles])
+    }
+
+    return normalized
+  }, [ensureProfileForUser, updateProfileCache])
+
+  useEffect(() => {
+    memberProfilesRef.current = memberProfiles
+  }, [memberProfiles])
 
   // Load messages and group data
   useEffect(() => {
@@ -50,41 +175,39 @@ const ChatPage = () => {
 
       try {
         setIsLoading(true)
-        const [groupData] = await Promise.all([
-          apiService.getGroup(groupId)
+        setHasMore(true)
+        setNextOffset(0)
+
+        const [groupData, memberProfilesData, messagesResponse] = await Promise.all([
+          apiService.getGroup(groupId),
+          apiService.getGroupMembers(groupId).catch((err) => {
+            console.error('Failed to fetch group members:', err)
+            return []
+          }),
+          apiService.getGroupMessages(groupId, PAGE_LIMIT, 0)
         ])
 
         setGroup(groupData)
+  setChatTable('chat_messages')
 
-        // initial fetch: try 'chat_messages' first (most common), fallback to 'messages'
-        let { data: initial, error } = await supabase
-          .from('chat_messages')
-          .select('id, group_id, user_id, content:message, message_type, created_at, profiles(full_name, avatar_url)')
-          .eq('group_id', groupId)
-          .order('created_at', { ascending: false })
-          .limit(50)
+        const profileMap = updateProfileCache(memberProfilesData || [])
+        const messageProfiles = (messagesResponse?.messages || [])
+          .map((msg) => msg?.profiles)
+          .filter((profile) => profile && profile.id)
+        const mergedProfileMap = messageProfiles.length > 0
+          ? updateProfileCache(messageProfiles)
+          : profileMap
 
-        if (error) {
-          // fallback to messages table
-          const fallback = await supabase
-            .from('messages')
-            .select('id, group_id, user_id, content, attachment_url, created_at, profiles(full_name, avatar_url)')
-            .eq('group_id', groupId)
-            .order('created_at', { ascending: false })
-            .limit(50)
-          if (fallback.error) {
-            console.error('Both tables failed:', error, fallback.error)
-            throw new Error('Could not load messages from either table')
-          }
-          initial = fallback.data
-          setChatTable('messages')
-        } else {
-          setChatTable('chat_messages')
-        }
+        const fetchedMessages = normalizeMessagesSync(messagesResponse?.messages || [], mergedProfileMap)
 
-        const ordered = (initial || []).reverse()
-        setMessages(ordered)
-        setHasMore((initial || []).length === 50)
+        setMessages(fetchedMessages)
+
+        const initialLimit = messagesResponse?.limit ?? PAGE_LIMIT
+        const initialOffset = messagesResponse?.offset ?? 0
+        const fetchedCount = messagesResponse?.messages?.length ?? 0
+
+        setHasMore(fetchedCount === initialLimit)
+        setNextOffset(initialOffset + fetchedCount)
       } catch (error) {
         console.error('Failed to load chat data:', error)
         toast.error('Failed to load chat')
@@ -95,13 +218,11 @@ const ChatPage = () => {
     }
 
     loadChatData()
-  }, [groupId, user, navigate])
+  }, [groupId, user, navigate, PAGE_LIMIT, updateProfileCache])
 
   // Real-time message subscription
   useEffect(() => {
     if (!groupId || !chatTable) return // Wait until table is determined
-
-    console.log('Setting up real-time subscription for table:', chatTable)
 
     // Subscribe to new messages for this group
     const channel = supabase
@@ -115,10 +236,8 @@ const ChatPage = () => {
           filter: `group_id=eq.${groupId}`
         },
         async (payload) => {
-          console.log('📡 Real-time message received:', payload)
           const newMessage = payload.new
           if (!newMessage) {
-            console.log('📡 No message in payload, skipping')
             return
           }
           
@@ -126,58 +245,22 @@ const ChatPage = () => {
             return
           }
           
-          // Handle content field mapping
-          if (chatTable === 'chat_messages' && newMessage.message) {
+          if (chatTable === 'chat_messages' && newMessage.message && !newMessage.content) {
             newMessage.content = newMessage.message
           }
-          
-          // Always fetch profile data for the message sender
-          const fetchProfileAndAddMessage = async () => {
-            // If it's a bot message, add the bot profile info
-            if (newMessage.user_id === 'bot' || newMessage.message_type === 'system') {
-              newMessage.profiles = {
-                full_name: '🤖 PlanPal Bot',
-                avatar_url: null
-              }
-            } else if (newMessage.user_id) {
-              // Always fetch profile for regular users to ensure we have latest data
-              try {
-                const { data: profile, error: profileError } = await supabase
-                  .from('profiles')
-                  .select('id, full_name, avatar_url, username')
-                  .eq('id', newMessage.user_id)
-                  .single()
-                
-                if (!profileError && profile) {
-                  newMessage.profiles = profile
-                } else {
-                  console.error('Failed to fetch profile for user:', newMessage.user_id, profileError)
-                  // Set a default profile if fetch fails
-                  newMessage.profiles = {
-                    full_name: 'Unknown User',
-                    avatar_url: null
-                  }
-                }
-              } catch (error) {
-                console.error('Error fetching profile:', error)
-                newMessage.profiles = {
-                  full_name: 'Unknown User',
-                  avatar_url: null
-                }
-              }
-            }
-            
-            // Add message to state
-            setMessages(prev => {
-              const exists = prev.some(m => m.id === newMessage.id)
-              if (exists) {
-                return prev
-              }
-              return [...prev, newMessage]
-            })
+
+          const enriched = await enrichMessage(newMessage)
+          if (!enriched) {
+            return
           }
-          
-          fetchProfileAndAddMessage()
+
+          setMessages(prev => {
+            const exists = prev.some(m => m.id === enriched.id)
+            if (exists) {
+              return prev
+            }
+            return [...prev, enriched]
+          })
         }
       )
       .subscribe();
@@ -186,7 +269,7 @@ const ChatPage = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [groupId, user, chatTable])
+  }, [groupId, user, chatTable, enrichMessage])
 
   // Supabase Realtime broadcast: subscribe to in-app chat events per group
   useEffect(() => {
@@ -204,11 +287,22 @@ const ChatPage = () => {
       if (!broadcasted) return
       if (String(broadcasted.group_id) !== String(groupId)) return
 
-      setMessages(prev => {
-        const exists = prev.some(m => m.id === broadcasted.id)
-        if (exists) return prev
-        return [...prev, broadcasted]
-      })
+      if (chatTable === 'chat_messages' && broadcasted.message && !broadcasted.content) {
+        broadcasted.content = broadcasted.message
+      }
+
+      enrichMessage(broadcasted)
+        .then((enriched) => {
+          if (!enriched) return
+          setMessages(prev => {
+            const exists = prev.some(m => m.id === enriched.id)
+            if (exists) return prev
+            return [...prev, enriched]
+          })
+        })
+        .catch((err) => {
+          console.error('Failed to process broadcast message:', err)
+        })
     }).subscribe()
 
     return () => {
@@ -217,7 +311,7 @@ const ChatPage = () => {
         channelRef.current = null
       }
     }
-  }, [groupId])
+  }, [groupId, chatTable, enrichMessage])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -265,152 +359,60 @@ const ChatPage = () => {
     setIsSending(true)
 
     try {
-      const { data: authData } = await supabase.auth.getUser()
-      const userId = authData?.user?.id
-      if (!userId) throw new Error('Not authenticated')
+      const isBotCommand = messageToSend.toLowerCase().startsWith('@bot ') ||
+        messageToSend.toLowerCase().startsWith('@bot,') ||
+        messageToSend.toLowerCase().startsWith('@bot')
 
-      // Check if message is a bot command
-      const isBotCommand = messageToSend.toLowerCase().startsWith('@bot ') || 
-                          messageToSend.toLowerCase().startsWith('@bot,') ||
-                          messageToSend.toLowerCase().startsWith('@bot')
-      
-      if (isBotCommand) {
-        console.log('🤖 Bot command detected!', messageToSend)
-        
-        // Extract the query after @bot (handle space, comma, or nothing)
-        let query = messageToSend.substring(4).trim() // Remove '@bot'
-        if (query.startsWith(',') || query.startsWith(' ')) {
-          query = query.substring(1).trim() // Remove comma or space
+      const messageType = isBotCommand ? 'bot_query' : 'text'
+
+      const response = await apiService.sendMessage(groupId, messageToSend, messageType)
+
+      const pendingMessages = []
+
+      if (response?.userMessage) {
+        pendingMessages.push(response.userMessage)
+      } else if (response) {
+        pendingMessages.push(response)
+      }
+
+      if (response?.botMessage) {
+        const botPayload = {
+          ...response.botMessage,
+          user_id: response.botMessage.user_id || 'bot',
+          message_type: response.botMessage.message_type || 'system'
         }
-        
-        console.log('🤖 Query extracted:', query)
-        
-        // Send user's question
-        let userMsgPayload
-        if (chatTable === 'chat_messages') {
-          userMsgPayload = { group_id: groupId, user_id: userId, message: messageToSend, message_type: 'text' }
-        } else {
-          userMsgPayload = { group_id: groupId, user_id: userId, content: messageToSend }
+        pendingMessages.push(botPayload)
+      }
+
+      const enrichedMessages = []
+      for (const rawMsg of pendingMessages) {
+        const enriched = await enrichMessage(rawMsg)
+        if (enriched) {
+          enrichedMessages.push(enriched)
         }
+      }
 
-        const { data: userMsg } = await supabase
-          .from(chatTable)
-          .insert([userMsgPayload])
-          .select(chatTable === 'chat_messages'
-            ? 'id, group_id, user_id, content:message, message_type, created_at, profiles(full_name, avatar_url)'
-            : 'id, group_id, user_id, content, attachment_url, created_at, profiles(full_name, avatar_url)'
-          )
-          .single()
-
-        if (userMsg) {
-          setMessages(prev => [...prev, userMsg])
-        }
-
-        // Get bot response
-        try {
-          console.log('🤖 Calling chatbot API...')
-          const botResponse = await apiService.queryChatbot(groupId, query)
-          console.log('🤖 Bot response received:', botResponse)
-          
-          // Backend already saved the message, just use the returned data
-          const botMessageText = botResponse.response || botResponse.answer || 'Sorry, I couldn\'t process that request.'
-          const savedBotMessage = botResponse.message // Message data from backend
-          
-          if (!savedBotMessage) {
-            console.error('❌ Bot message not saved by backend!')
-            toast.error('Bot response not saved. Please try again.')
-            setIsSending(false)
-            return
-          }
-
-          console.log('✅ Bot message saved by backend:', savedBotMessage.id)
-
-          // Create bot message with profile info for display
-          const botMsgPayload = {
-            id: savedBotMessage.id,
-            group_id: savedBotMessage.group_id,
-            user_id: savedBotMessage.user_id,
-            content: savedBotMessage.message || botMessageText,
-            message: savedBotMessage.message,
-            message_type: savedBotMessage.message_type,
-            created_at: savedBotMessage.created_at,
-            profiles: {
-              full_name: '🤖 PlanPal Bot',
-              avatar_url: null
+      if (enrichedMessages.length > 0) {
+        setMessages(prev => {
+          const combined = [...prev]
+          enrichedMessages.forEach((msg) => {
+            const exists = combined.some(existing => existing.id === msg.id)
+            if (!exists) {
+              combined.push(msg)
             }
-          }
-
-          console.log('🤖 Adding bot message to UI:', botMsgPayload)
-          
-          setMessages(prev => {
-            // Check if it already exists
-            const exists = prev.some(m => m.id === botMsgPayload.id)
-            if (exists) {
-              console.log('🤖 Bot message already exists, not adding duplicate')
-              return prev
-            }
-            console.log('🤖 Bot message added to messages array')
-            return [...prev, botMsgPayload]
           })
-          
-          // Note: Real-time subscription will also receive this message
-          // but duplicate check will prevent double-adding
-        } catch (botError) {
-          console.error('Bot error:', botError)
-          toast.error('Bot is having trouble responding')
-        }
-
-        setIsSending(false)
-        return
-      }
-
-      // Regular message (not bot command)
-      let insertPayload
-      if (chatTable === 'chat_messages') {
-        insertPayload = { group_id: groupId, user_id: userId, message: messageToSend, message_type: 'text' }
-      } else {
-        insertPayload = { group_id: groupId, user_id: userId, content: messageToSend }
-      }
-
-      const { data, error } = await supabase
-        .from(chatTable)
-        .insert([insertPayload])
-        .select()
-        .single()
-
-      if (error) throw error
-
-      // Fetch user profile to attach to the message
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url, username')
-        .eq('id', userId)
-        .single()
-
-      // Attach profile to message
-      if (userProfile) {
-        data.profiles = userProfile
-      }
-
-      // Handle content field mapping
-      if (chatTable === 'chat_messages' && data.message) {
-        data.content = data.message
-      }
-
-      // Optimistic add; realtime will also deliver it
-      setMessages(prev => {
-        const exists = prev.some(m => m.id === data.id)
-        if (exists) return prev
-        return [...prev, data]
-      })
-
-      // Broadcast to all clients in this group
-      if (channelRef.current) {
-        channelRef.current.send({
-          type: 'broadcast',
-          event: 'message',
-          payload: { message: data }
+          return combined
         })
+
+        if (channelRef.current) {
+          enrichedMessages.forEach((msg) => {
+            channelRef.current.send({
+              type: 'broadcast',
+              event: 'message',
+              payload: { message: msg }
+            })
+          })
+        }
       }
     } catch (error) {
       console.error('Failed to send message:', error)
@@ -558,16 +560,27 @@ const ChatPage = () => {
         .single()
       if (error) throw error
 
-      setMessages(prev => [...prev, data])
-      toast.success('Attachment sent')
+      const normalizedAttachment = await enrichMessage({
+        ...data,
+        message_type: data.message_type || 'attachment'
+      })
 
-      // Broadcast attachment message
-      if (channelRef.current) {
-        channelRef.current.send({
-          type: 'broadcast',
-          event: 'message',
-          payload: { message: data }
+      if (normalizedAttachment) {
+        setMessages(prev => {
+          const exists = prev.some(m => m.id === normalizedAttachment.id)
+          if (exists) return prev
+          return [...prev, normalizedAttachment]
         })
+        toast.success('Attachment sent')
+
+        // Broadcast attachment message
+        if (channelRef.current) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'message',
+            payload: { message: normalizedAttachment }
+          })
+        }
       }
     } catch (err) {
       console.error('Attachment upload failed:', err)
@@ -659,24 +672,30 @@ const ChatPage = () => {
                     <div className="flex justify-center">
                       <button
                         onClick={async () => {
-                          if (isLoadingMore || messages.length === 0) return
+                          if (isLoadingMore || !hasMore) return
                           setIsLoadingMore(true)
                           try {
-                            const oldest = messages[0]
-                            const { data, error } = await supabase
-                              .from(chatTable)
-                              .select(chatTable === 'chat_messages'
-                                ? 'id, group_id, user_id, content:message, message_type, created_at, profiles(full_name, avatar_url)'
-                                : 'id, group_id, user_id, content, attachment_url, created_at, profiles(full_name, avatar_url)'
-                              )
-                              .eq('group_id', groupId)
-                              .lt('created_at', oldest.created_at)
-                              .order('created_at', { ascending: false })
-                              .limit(50)
-                            if (error) throw error
-                            const chunk = (data || []).reverse()
-                            setMessages(prev => [...chunk, ...prev])
-                            setHasMore((data || []).length === 50)
+                            const response = await apiService.getGroupMessages(groupId, PAGE_LIMIT, nextOffset)
+                            if (Array.isArray(response?.messages)) {
+                              const chunkProfiles = response.messages
+                                .map((msg) => msg?.profiles)
+                                .filter((profile) => profile && profile.id)
+                              if (chunkProfiles.length > 0) {
+                                updateProfileCache(chunkProfiles)
+                              }
+                            }
+
+                            const chunk = normalizeMessagesSync(response?.messages || [], memberProfilesRef.current)
+
+                            if (chunk.length > 0) {
+                              setMessages(prev => [...chunk, ...prev])
+                              const fetchedCount = response?.messages?.length ?? 0
+                              const responseOffset = response?.offset ?? nextOffset
+                              setNextOffset(responseOffset + fetchedCount)
+                              setHasMore(fetchedCount === (response?.limit ?? PAGE_LIMIT))
+                            } else {
+                              setHasMore(false)
+                            }
                           } catch (err) {
                             console.error('Failed to load older messages:', err)
                             toast.error('Failed to load older messages')
