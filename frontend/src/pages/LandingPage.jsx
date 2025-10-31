@@ -47,7 +47,7 @@ const LandingPage = () => {
       {/* Hero Section */}
       <section 
         ref={heroSectionRef}
-        className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white py-24 md:py-28"
+        className="relative flex items-center overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white min-h-screen py-24 md:py-28"
       >
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_65%)]" />
